@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Data Visualization App</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>ML Data Visualization Platform</h1>
+            <p>Upload your data, select algorithms, and visualize machine learning results</p>
+        </header>
+
+        <!-- File Upload Section -->
+        <section class="section">
+            <div class="card">
+                <div class="card__header">
+                    <h2>1. Data Upload</h2>
+                </div>
+                <div class="card__body">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <p>Drag and drop your CSV or XLSX file here</p>
+                            <p class="upload-subtitle">or click to browse</p>
+                            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" hidden>
+                        </div>
+                    </div>
+
+                    <div class="sample-datasets">
+                        <h3>Or try a sample dataset:</h3>
+                        <div class="sample-buttons">
+                            <button class="btn btn--outline" onclick="loadSampleDataset('iris')">Iris Dataset</button>
+                            <button class="btn btn--outline" onclick="loadSampleDataset('housing')">Housing Prices</button>
+                            <button class="btn btn--outline" onclick="loadSampleDataset('customer')">Customer Segmentation</button>
+                        </div>
+                    </div>
+
+                    <div id="fileInfo" class="file-info hidden">
+                        <div class="status status--success">
+                            <span id="fileName"></span> loaded successfully
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Data Preview Section -->
+        <section class="section hidden" id="dataPreviewSection">
+            <div class="card">
+                <div class="card__header">
+                    <h2>2. Data Preview</h2>
+                </div>
+                <div class="card__body">
+                    <div class="data-stats" id="dataStats"></div>
+                    <div class="data-table-container">
+                        <table class="data-table" id="dataTable">
+                            <thead id="tableHead"></thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Configuration Section -->
+        <section class="section hidden" id="configSection">
+            <div class="card">
+                <div class="card__header">
+                    <h2>3. Model Configuration</h2>
+                </div>
+                <div class="card__body">
+                    <div class="config-grid">
+                        <div class="config-item">
+                            <label class="form-label">Select Target Column:</label>
+                            <select class="form-control" id="targetColumn">
+                                <option value="">Choose target column...</option>
+                            </select>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="form-label">Select Algorithm:</label>
+                            <select class="form-control" id="algorithmSelect">
+                                <option value="">Choose algorithm...</option>
+                            </select>
+                            <div id="algorithmDescription" class="algorithm-description"></div>
+                        </div>
+
+                        <div class="config-item">
+                            <label class="form-label">Train/Test Split: <span id="splitValue">80/20</span></label>
+                            <input type="range" class="slider" id="splitSlider" min="60" max="90" value="80">
+                        </div>
+                    </div>
+
+                    <div class="feature-selection">
+                        <h3>Feature Selection:</h3>
+                        <div id="featureCheckboxes" class="feature-checkboxes"></div>
+                    </div>
+
+                    <button class="btn btn--primary" id="trainModel" disabled>Train Model</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Training Progress -->
+        <div id="trainingProgress" class="training-progress hidden">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p>Training model...</p>
+        </div>
+
+        <!-- Results Section -->
+        <section class="section hidden" id="resultsSection">
+            <div class="card">
+                <div class="card__header">
+                    <h2>4. Model Results</h2>
+                </div>
+                <div class="card__body">
+                    <div class="metrics-grid" id="metricsGrid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visualization Section -->
+        <section class="section hidden" id="visualizationSection">
+            <div class="card">
+                <div class="card__header">
+                    <h2>5. Data Visualizations</h2>
+                </div>
+                <div class="card__body">
+                    <div class="viz-controls">
+                        <div class="viz-control-item">
+                            <label class="form-label">Chart Type:</label>
+                            <select class="form-control" id="chartType">
+                                <option value="scatter">Scatter Plot</option>
+                                <option value="bar">Bar Chart</option>
+                                <option value="line">Line Chart</option>
+                                <option value="histogram">Histogram</option>
+                                <option value="boxplot">Box Plot</option>
+                                <option value="heatmap">Correlation Heatmap</option>
+                            </select>
+                        </div>
+
+                        <div class="viz-control-item">
+                            <label class="form-label">X-Axis:</label>
+                            <select class="form-control" id="xAxis"></select>
+                        </div>
+
+                        <div class="viz-control-item">
+                            <label class="form-label">Y-Axis:</label>
+                            <select class="form-control" id="yAxis"></select>
+                        </div>
+
+                        <button class="btn btn--secondary" id="updateChart">Update Chart</button>
+                        <button class="btn btn--outline" id="downloadChart" onclick="handleDownload()">Download</button>
+                    </div>
+
+                    <div class="chart-container">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <script>
+                function handleDownload() {
+                    // Trigger the download action
+                    const chart = document.getElementById('mainChart');
+                    const link = document.createElement('a');
+                    link.href = chart.toDataURL('image/png');
+                    link.download = 'chart.png';
+                    link.click();
+
+                    // Change background after downloading
+                    document.body.style.backgroundColor = '#e0f7fa';
+
+                    // Optional: Revert background after 2 seconds
+                    setTimeout(() => {
+                        document.body.style.backgroundColor = '';
+                    }, 2000);
+                }
+            </script>
+        </section>
+
+
+        <!-- Additional Charts Section -->
+        <section class="section hidden" id="additionalChartsSection">
+            <div class="card">
+                <div class="card__header">
+                    <h2>6. Advanced Visualizations</h2>
+                </div>
+                <div class="card__body">
+                    <div class="charts-grid">
+                        <div class="chart-item">
+                            <h3>Feature Importance</h3>
+                            <div class="chart-container">
+                                <canvas id="featureImportanceChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-item">
+                            <h3>Confusion Matrix</h3>
+                            <div class="chart-container">
+                                <canvas id="confusionMatrixChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-item">
+                            <h3>Learning Curve</h3>
+                            <div class="chart-container">
+                                <canvas id="learningCurveChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-item">
+                            <h3>ROC Curve</h3>
+                            <div class="chart-container">
+                                <canvas id="rocCurveChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Move this OUTSIDE of charts-grid -->
+                    <div style="text-align: right; margin-top: 24px;">
+                        <button class="btn btn--primary" id="downloadAdvancedBtn">📥 Download Visualizations</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
